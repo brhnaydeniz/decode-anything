@@ -1,62 +1,105 @@
-# cozucu.py
+# decode-anything
 
-Kodlama ve hash çözme/kırma aracı. Bir metnin **hangi kodlama ya da hash** olduğunu otomatik tahmin eder; kodlamaysa çözer, hash'se bir kelime listesiyle kırar.
+You throw a string at it, it tells you what it is. If it's an encoding it decodes it; if it's a hash it tries to crack it.
 
-OSINT ve CTF çalışmalarında, bir dizinin ne olduğunu (hex mi, Base64 mü, MD5 mi) hızlıca anlamak için yazıldı.
+I wrote this because I got tired of staring at a string during OSINT/CTF work wondering "is this hex, base64, or md5?". Single file, no dependencies, just needs Python 3.
 
-## Özellikler
+*(Türkçe açıklama aşağıda.)*
 
-- **Kodlamaları çözer** (internet gerekmez): Hex, URL encoding, Base64, Base32, Binary, Decimal ASCII
-- **Hash kırar**: MD5, SHA-1, SHA-256 — bir kelime listesiyle
-- **rockyou.txt'yi otomatik bulur**; sıkıştırılmış (`.gz`) ise kendisi açar
-- **Kurulum gerektirmez** — sadece Python 3 yeter, hiçbir ek kütüphane yok
+## What it handles
 
-## Kurulum
+Encodings (offline, exact): **Hex, URL, Base64, Base32, Binary, Decimal ASCII**
+
+Hashes (with a wordlist): **MD5, SHA-1, SHA-256**
+
+When you pass a hash it finds `rockyou.txt` on its own and unzips it if needed.
+
+## Usage
 
 ```bash
-git clone https://github.com/<kullanici-adin>/cozucu.git
-cd cozucu
-python3 cozucu.py --help
+git clone https://github.com/brhnaydeniz/decode-anything.git
+cd decode-anything
+
+python3 decoder.py "SGVsbG8gV29ybGQ="                   # base64 -> Hello World
+python3 decoder.py "48656c6c6f"                         # hex -> Hello
+python3 decoder.py "5f4dcc3b5aa765d61d8327deb882cf99"   # md5 -> password
+python3 decoder.py "<hash>" --wordlist /path/to/list.txt
 ```
 
-Hepsi bu. Python 3 kurulu her Linux (ve macOS/Windows) makinede çalışır.
+## rockyou
+
+Cracking hashes needs a wordlist. The tool looks in:
+
+- `/usr/share/wordlists/rockyou.txt` (ships with Kali)
+- `/usr/share/wordlists/rockyou.txt.gz` (if zipped, it extracts to `~/.cache/decoder/`, no sudo)
+- `rockyou.txt` in the current folder
+
+If none is found it falls back to a small common-password list.
+
+## How it works
+
+Encodings are reversible: the tool checks the character set and length, tries to decode, and reports the type if the result is readable text.
+
+Hashes are not reversible. "Cracking" means hashing every word in a list and comparing it to your target. Online crackers do the same thing with much bigger lists.
+
+## Roadmap
+
+- SQLite-backed cache (for many lookups)
+- ROT13, Base58, Morse support
+- Multi-layer encodings (e.g. hex inside base64)
+
+## Disclaimer
+
+For education, CTFs, and testing only on systems you're authorized to test. Accessing others' data without permission is a crime.
+
+## License
+
+MIT
+
+---
+
+# decode-anything (Türkçe)
+
+Bir metin atıyorsun, ne olduğunu söylüyor. Kodlamaysa çözüyor, hash'se kırmaya çalışıyor.
+
+OSINT ve CTF'lerde bir dizi görünce "bu hex mi, base64 mü, md5 mi?" diye uğraşmaktan sıkıldığım için yazdım. Tek dosya, hiçbir ek kütüphane yok, Python 3 yetiyor.
+
+## Ne çözüyor
+
+Kodlamalar (internetsiz, kesin): **Hex, URL, Base64, Base32, Binary, Decimal ASCII**
+
+Hash'ler (wordlist ile): **MD5, SHA-1, SHA-256**
+
+Hash girince `rockyou.txt`'yi kendi buluyor, zipliyse kendi açıyor.
 
 ## Kullanım
 
 ```bash
-# Kodlama çözme
-python3 cozucu.py "SGVsbG8gV29ybGQ="        # Base64  -> Hello World
-python3 cozucu.py "48656c6c6f"              # Hex     -> Hello
-python3 cozucu.py "83 116 97 114"           # Decimal -> Star
+git clone https://github.com/brhnaydeniz/decode-anything.git
+cd decode-anything
 
-# Hash kırma (rockyou otomatik bulunur)
-python3 cozucu.py "5f4dcc3b5aa765d61d8327deb882cf99"   # MD5 -> password
-
-# Kendi kelime listenle
-python3 cozucu.py "<hash>" --wordlist /yol/liste.txt
+python3 decoder.py "SGVsbG8gV29ybGQ="                   # base64 -> Hello World
+python3 decoder.py "48656c6c6f"                         # hex -> Hello
+python3 decoder.py "5f4dcc3b5aa765d61d8327deb882cf99"   # md5 -> password
+python3 decoder.py "<hash>" --wordlist /yol/liste.txt
 ```
 
-## rockyou.txt
+## rockyou
 
-Hash kırmak için bir kelime listesi gerekir. Araç şu konumları otomatik arar:
+Hash kırmak için kelime listesi lazım. Araç şu yerlere bakıyor:
 
-- `/usr/share/wordlists/rockyou.txt` (Kali Linux'ta hazır gelir)
-- `/usr/share/wordlists/rockyou.txt.gz` (sıkıştırılmışsa otomatik açılır)
-- Çalıştırıldığı klasördeki `rockyou.txt`
+- `/usr/share/wordlists/rockyou.txt` (Kali'de hazır)
+- `/usr/share/wordlists/rockyou.txt.gz` (zipliyse `~/.cache/decoder/` altına açıyor, sudo istemiyor)
+- Çalıştığın klasördeki `rockyou.txt`
 
-Kali'de liste sıkıştırılmış gelir; araç ilk çalıştırmada onu `~/.cache/cozucu/` altına açar, `sudo` gerektirmez. Kali dışındaki sistemlerde `rockyou.txt`'yi indirip script'in yanına koyman yeterli.
+Hiçbiri yoksa küçük bir yaygın-parola listesiyle devam ediyor.
 
-Liste hiç bulunamazsa araç küçük bir yerleşik listeyle (yaygın parolalar) çalışır.
+## Nasıl çalışıyor
 
-## Nasıl çalışır?
+Kodlamalar geri çevrilebilir: araç karakter kümesine ve uzunluğa bakıp çözmeyi deniyor, sonuç okunabilir metin çıkarsa o türü yazıyor.
 
-- **Kodlamalar geri çevrilebilir.** Araç her türün parmak izine bakar (karakter kümesi, uzunluk) ve çözüm denemesi okunabilir metin veriyorsa o türü raporlar.
-- **Hash'ler geri çevrilemez.** "Kırmak" demek, kelime listesindeki her kelimenin hash'ini hesaplayıp aradığın hash'le karşılaştırmaktır. CrackStation gibi siteler de aynı işi, çok daha büyük listelerle yapar.
+Hash'ler geri çevrilemez. "Kırmak" dediğimiz şey, listedeki her kelimenin hash'ini hesaplayıp aradığın hash'le karşılaştırmak. Online siteler de aynı şeyi çok daha büyük listelerle yapıyor.
 
 ## Uyarı
 
-Bu araç eğitim, CTF ve **yalnızca yetkili olduğun** sistemlerdeki güvenlik testleri içindir. Başkalarının hesap ve verilerine izinsiz erişim için kullanmak suçtur.
-
-## Lisans
-
-MIT
+Eğitim, CTF ve sadece yetkili olduğun sistemlerdeki testler için. Başkasının verisine izinsiz erişim suçtur.
