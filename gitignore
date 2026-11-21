@@ -1,0 +1,6 @@
+# rockyou ve acilan kopyalar repoya girmesin (cok buyuk)
+rockyou.txt
+*.gz
+.cache/
+__pycache__/
+*.pyc
